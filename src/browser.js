@@ -1,271 +1,213 @@
-/* eslint-env browser */
-
 /**
- * This is the web browser implementation of `debug()`.
+ * 前端日志输出，封装 console日志，简化代码，支持模块或直接输出
+ * 调用时，描述字符串后置，便于可选缺省，输出时，自带前置，类似 后端pino，保持前后端一致性
+ * m 为模块，fn 为函数名称
  */
+class Log {
+	/** @type {string} 模块 */
+	m = "";
 
-exports.formatArgs = formatArgs;
-exports.save = save;
-exports.load = load;
-exports.useColors = useColors;
-exports.storage = localstorage();
-exports.destroy = (() => {
-	let warned = false;
+	/** @type {string} 函数 */
+	fn = "";
 
-	return () => {
-		if (!warned) {
-			warned = true;
-			console.warn('Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.');
+	/**
+	 * @param {string} m 模块
+	 */
+	constructor(m) {
+		this.m = m;
+	}
+
+	/**
+	 * get log desc
+	 * 描述字符串后置调用，前置显示
+	 * @param {*[]} args
+	 * @returns {string}
+	 */
+	getDesc(args) {
+		let R = "";
+		try {
+			const _ = this;
+			const { m } = _;
+			let fn = "",
+				desc = "";
+
+			if (args.length > 1) {
+				const last = args.at(-1);
+				if (typeof last === "object") {
+					({ desc, fn } = last);
+				} else if (typeof last === "string") desc = last;
+				if (desc || fn) {
+					fn = fn || _.fn;
+					_.fn = fn;
+					args.pop();
+				}
+			}
+			fn = fn || _.fn;
+			if (m) desc = `${desc}[${m}${fn ? ":" + fn : ""}]`; // eslint-disable-line
+			R = desc;
+		} catch (e) {
+			console.error(`getDesc exp:${e.message}`);
 		}
-	};
-})();
 
-/**
- * Colors.
- */
-
-exports.colors = [
-	'#0000CC',
-	'#0000FF',
-	'#0033CC',
-	'#0033FF',
-	'#0066CC',
-	'#0066FF',
-	'#0099CC',
-	'#0099FF',
-	'#00CC00',
-	'#00CC33',
-	'#00CC66',
-	'#00CC99',
-	'#00CCCC',
-	'#00CCFF',
-	'#3300CC',
-	'#3300FF',
-	'#3333CC',
-	'#3333FF',
-	'#3366CC',
-	'#3366FF',
-	'#3399CC',
-	'#3399FF',
-	'#33CC00',
-	'#33CC33',
-	'#33CC66',
-	'#33CC99',
-	'#33CCCC',
-	'#33CCFF',
-	'#6600CC',
-	'#6600FF',
-	'#6633CC',
-	'#6633FF',
-	'#66CC00',
-	'#66CC33',
-	'#9900CC',
-	'#9900FF',
-	'#9933CC',
-	'#9933FF',
-	'#99CC00',
-	'#99CC33',
-	'#CC0000',
-	'#CC0033',
-	'#CC0066',
-	'#CC0099',
-	'#CC00CC',
-	'#CC00FF',
-	'#CC3300',
-	'#CC3333',
-	'#CC3366',
-	'#CC3399',
-	'#CC33CC',
-	'#CC33FF',
-	'#CC6600',
-	'#CC6633',
-	'#CC9900',
-	'#CC9933',
-	'#CCCC00',
-	'#CCCC33',
-	'#FF0000',
-	'#FF0033',
-	'#FF0066',
-	'#FF0099',
-	'#FF00CC',
-	'#FF00FF',
-	'#FF3300',
-	'#FF3333',
-	'#FF3366',
-	'#FF3399',
-	'#FF33CC',
-	'#FF33FF',
-	'#FF6600',
-	'#FF6633',
-	'#FF9900',
-	'#FF9933',
-	'#FFCC00',
-	'#FFCC33'
-];
-
-/**
- * Currently only WebKit-based Web Inspectors, Firefox >= v31,
- * and the Firebug extension (any Firefox version) are known
- * to support "%c" CSS customizations.
- *
- * TODO: add a `localStorage` variable to explicitly enable/disable colors
- */
-
-// eslint-disable-next-line complexity
-function useColors() {
-	// NB: In an Electron preload script, document will be defined but not fully
-	// initialized. Since we know we're in Chrome, we'll just detect this case
-	// explicitly
-	if (typeof window !== 'undefined' && window.process && (window.process.type === 'renderer' || window.process.__nwjs)) {
-		return true;
+		return R;
 	}
 
-	// Internet Explorer and Edge do not support colors.
-	if (typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/(edge|trident)\/(\d+)/)) {
-		return false;
+	/** @param {...any} args - params */
+	log(...args) {
+		const _ = this;
+		const last = args.at(-1);
+		// clear fn
+		if (args.length === 1 && typeof last === "object" && last.fn) _.fn = "";
+		else {
+			const desc = _.getDesc(args);
+			console.log(desc, ...args);
+		}
 	}
 
-	let m;
+	/** @param {...any} args - params */
+	debug(...args) {
+		const _ = this;
+		const desc = _.getDesc(args);
+		if (desc) console.log(desc, ...args);
+		else console.log(...args);
+	}
 
-	// Is webkit? http://stackoverflow.com/a/16459606/376773
-	// document is undefined in react-native: https://github.com/facebook/react-native/pull/1632
-	return (typeof document !== 'undefined' && document.documentElement && document.documentElement.style && document.documentElement.style.WebkitAppearance) ||
-		// Is firebug? http://stackoverflow.com/a/398120/376773
-		(typeof window !== 'undefined' && window.console && (window.console.firebug || (window.console.exception && window.console.table))) ||
-		// Is firefox >= v31?
-		// https://developer.mozilla.org/en-US/docs/Tools/Web_Console#Styling_messages
-		(typeof navigator !== 'undefined' && navigator.userAgent && (m = navigator.userAgent.toLowerCase().match(/firefox\/(\d+)/)) && parseInt(m[1], 10) >= 31) ||
-		// Double check webkit in userAgent just in case we are in a worker
-		(typeof navigator !== 'undefined' && navigator.userAgent && navigator.userAgent.toLowerCase().match(/applewebkit\/(\d+)/));
+	/** @param {...any} args - params */
+	info(...args) {
+		const _ = this;
+		const desc = _.getDesc(args);
+		if (desc) console.info(desc, ...args);
+		else console.log(...args);
+	}
+
+	/** @param {...any} args - params */
+	warn(...args) {
+		const _ = this;
+		const { desc, arg } = _.getDesc(args);
+		if (desc) console.warn(desc, ...arg);
+		else console.log(...args);
+	}
+
+	/** @param {...any} args - params */
+	trace(...args) {
+		const _ = this;
+		const { desc, arg } = _.getDesc(args);
+		if (desc) console.trace(desc, ...arg);
+		else console.trace(...args);
+	}
+
+	/** @param {...any} args - params */
+	error(...args) {
+		const _ = this;
+		const desc = _.getDesc(args);
+		if (desc) console.error(desc, ...args);
+		else console.log(...args);
+	}
+
+	/**
+	 * 用于 catch(e) log.err(e)
+	 * @param {...any} args - params */
+	err(...args) {
+		const _ = this;
+		const first = args?.[0];
+		if (
+			first instanceof Error ||
+			(first && first.message && first.cause && first.stack)
+		)
+			args[0] = { exp: args[0].message };
+		_.error(...args);
+	}
+}
+
+function getDesc(args) {
+	let desc = "";
+	const last = args.at(-1);
+	if (typeof last === "string") {
+		desc = last;
+		args.pop();
+	}
+	return desc;
 }
 
 /**
- * Colorize log arguments if enabled.
- *
- * @api public
+ * 标准日志输出或构建模块日志类实例，用于模块中带[m:xxx]标记日志输出
+ * 启用 {f:fn} 标记时，需在函数尾部清除f（log({f:''})），否则会溢出到其他函数
+ * @param {...any} args - params
+ * returns {*}
  */
+function log(...args) {
+	const last = args.at(-1);
 
-function formatArgs(args) {
-	args[0] = (this.useColors ? '%c' : '') +
-		this.namespace +
-		(this.useColors ? ' %c' : ' ') +
-		args[0] +
-		(this.useColors ? '%c ' : ' ') +
-		'+' + module.exports.humanize(this.diff);
-
-	if (!this.useColors) {
+	// 全局日志
+	if (args.length !== 1 || !last?.m) {
+		const desc = getDesc(args);
+		desc ? console.log(desc, ...args) : console.log(...args);
 		return;
 	}
 
-	const c = 'color: ' + this.color;
-	args.splice(1, 0, c, 'color: inherit');
+	// 唯一 m 属性，则构造新的 log 实例，这种写法，能被jsDoc识别子属性
+	const lg = new Log(last?.m);
+	/** @param {*} args2 */
+	const R = (...args2) => lg.log(...args2);
+	R.debug = lg.debug.bind(lg);
+	R.info = lg.info.bind(lg);
+	R.warn = lg.warn.bind(lg);
+	R.info = lg.info.bind(lg);
+	R.trace = lg.trace.bind(lg);
+	R.error = lg.error.bind(lg);
+	R.err = lg.err.bind(lg);
 
-	// The final "%c" is somewhat tricky, because there could be other
-	// arguments passed either before or after the %c, so we need to
-	// figure out the correct index to insert the CSS into
-	let index = 0;
-	let lastC = 0;
-	args[0].replace(/%[a-zA-Z%]/g, match => {
-		if (match === '%%') {
-			return;
-		}
-		index++;
-		if (match === '%c') {
-			// We only are interested in the *last* %c
-			// (the user may have provided their own)
-			lastC = index;
-		}
-	});
-
-	args.splice(lastC, 0, c);
+	return R;
 }
 
 /**
- * Invokes `console.debug()` when available.
- * No-op when `console.debug` is not a "function".
- * If `console.debug` is not available, falls back
- * to `console.log`.
- *
- * @api public
- */
-exports.log = console.debug || console.log || (() => {});
-
-/**
- * Save `namespaces`.
- *
- * @param {String} namespaces
- * @api private
- */
-function save(namespaces) {
-	try {
-		if (namespaces) {
-			exports.storage.setItem('debug', namespaces);
-		} else {
-			exports.storage.removeItem('debug');
-		}
-	} catch (error) {
-		// Swallow
-		// XXX (@Qix-) should we be logging these?
-	}
-}
-
-/**
- * Load `namespaces`.
- *
- * @return {String} returns the previously persisted debug modes
- * @api private
- */
-function load() {
-	let r;
-	try {
-		r = exports.storage.getItem('debug');
-	} catch (error) {
-		// Swallow
-		// XXX (@Qix-) should we be logging these?
-	}
-
-	// If debug isn't set in LS, and we're in Electron, try to load $DEBUG
-	if (!r && typeof process !== 'undefined' && 'env' in process) {
-		r = process.env.DEBUG;
-	}
-
-	return r;
-}
-
-/**
- * Localstorage attempts to return the localstorage.
- *
- * This is necessary because safari throws
- * when a user disables cookies/localstorage
- * and you attempt to access it.
- *
- * @return {LocalStorage}
- * @api private
- */
-
-function localstorage() {
-	try {
-		// TVMLKit (Apple TV JS Runtime) does not have a window object, just localStorage in the global context
-		// The Browser also has localStorage in the global context.
-		return localStorage;
-	} catch (error) {
-		// Swallow
-		// XXX (@Qix-) should we be logging these?
-	}
-}
-
-module.exports = require('./common')(exports);
-
-const {formatters} = module.exports;
-
-/**
- * Map %j to `JSON.stringify()`, since no Web Inspectors do that by default.
- */
-
-formatters.j = function (v) {
-	try {
-		return JSON.stringify(v);
-	} catch (error) {
-		return '[UnexpectedJSONParseError]: ' + error.message;
-	}
+ * 用于 catch(e) log.err(e)
+ * @param {...any} args - params */
+log.err = (...args) => {
+	const desc = getDesc(args);
+	const first = args?.[0];
+	if (
+		first instanceof Error ||
+		(first && first.message && first.cause && first.stack)
+	)
+		args[0] = { exp: args[0].message };
+	desc ? console.error(desc, ...args) : console.error(...args);
 };
+
+/**
+ * @param {...any} args - params */
+log.error = (...args) => {
+	const desc = getDesc(args);
+	desc ? console.error(desc, ...args) : console.error(...args);
+};
+
+/**
+ * @param {...any} args - params */
+log.warn = (...args) => {
+	const desc = getDesc(args);
+	desc ? console.warn(desc, ...args) : console.warn(...args);
+};
+
+/**
+ * @param {...any} args - params */
+log.info = (...args) => {
+	const desc = getDesc(args);
+	desc ? console.info(desc, ...args) : console.info(...args);
+};
+
+/**
+ * @param {...any} args - params */
+log.debug = (...args) => {
+	const desc = getDesc(args);
+	desc ? console.log(desc, ...args) : console.log(...args);
+};
+
+/**
+ * @param {...any} args - params */
+log.trace = (...args) => {
+	const desc = getDesc(args);
+	desc ? console.trace(desc, ...args) : console.trace(...args);
+};
+
+export default log;
+// export { log, Log };

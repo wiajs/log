@@ -7,7 +7,6 @@ module.exports = function (config) {
 		// List of files / patterns to load in the browser
 		files: [
 			'src/browser.js',
-			'src/common.js',
 			'test.js'
 		],
 

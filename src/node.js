@@ -1,263 +1,150 @@
-/**
- * Module dependencies.
- */
-
-const tty = require('tty');
-const util = require('util');
+import path from "node:path";
+import debug from "debug";
 
 /**
- * This is the Node.js implementation of `debug()`.
+ * debug日志封装,
+ * 使用方法：
+ * import {log as Log, filename} from './log.js'
+ * const log = Log({env: `wia:${filename(__filename)}`})
+ * log('hello')
+ * log({a: 1, b: 2}, 'fun')
+ * log.error/err/info/warn
+ * $env:DEBUG=* 全开
+ * $env:DEBUG=*:log 全开
+ * $env:DEBUG=*:info log 不开，其他全开
+ * warn 和 err 一直打开！
  */
+export default class Log {
+	/**
+	 * 构造函数
+	 * @param {*} opts {
+	 *  pre: 前缀，一般是模块名称,
+	 *  env: NODE_DEBUG 环境变量
+	 * }
+	 */
+	constructor(opts) {
+		let { env } = opts;
+		env = env ?? "";
+		const ds = {}; // debugs
+		ds.debug = debug(`${env}`);
+		ds.info = debug(`${env}:info`);
+		ds.err = debug(`${env}:err`);
+		ds.warn = debug(`${env}:warn`);
 
-exports.init = init;
-exports.log = log;
-exports.formatArgs = formatArgs;
-exports.save = save;
-exports.load = load;
-exports.useColors = useColors;
-exports.destroy = util.deprecate(
-	() => {},
-	'Instance method `debug.destroy()` is deprecated and no longer does anything. It will be removed in the next major version of `debug`.'
-);
+		// 仅最后调用生效，覆盖环境变量
+		if (ds.debug.enabled) debug.enable("*");
+		else if (ds.info.enabled)
+			debug.enable(`${env}:info,${env}:err,${env}:warn`);
+		else debug.enable(`${env}:err,${env}:warn`);
 
-/**
- * Colors.
- */
-
-exports.colors = [6, 2, 3, 4, 5, 1];
-
-try {
-	// Optional dependency (as in, doesn't need to be installed, NOT like optionalDependencies in package.json)
-	// eslint-disable-next-line import/no-extraneous-dependencies
-	const supportsColor = require('supports-color');
-
-	if (supportsColor && (supportsColor.stderr || supportsColor).level >= 2) {
-		exports.colors = [
-			20,
-			21,
-			26,
-			27,
-			32,
-			33,
-			38,
-			39,
-			40,
-			41,
-			42,
-			43,
-			44,
-			45,
-			56,
-			57,
-			62,
-			63,
-			68,
-			69,
-			74,
-			75,
-			76,
-			77,
-			78,
-			79,
-			80,
-			81,
-			92,
-			93,
-			98,
-			99,
-			112,
-			113,
-			128,
-			129,
-			134,
-			135,
-			148,
-			149,
-			160,
-			161,
-			162,
-			163,
-			164,
-			165,
-			166,
-			167,
-			168,
-			169,
-			170,
-			171,
-			172,
-			173,
-			178,
-			179,
-			184,
-			185,
-			196,
-			197,
-			198,
-			199,
-			200,
-			201,
-			202,
-			203,
-			204,
-			205,
-			206,
-			207,
-			208,
-			209,
-			214,
-			215,
-			220,
-			221
-		];
-	}
-} catch (error) {
-	// Swallow - we only care if `supports-color` is available; it doesn't have to be.
-}
-
-/**
- * Build up the default `inspectOpts` object from the environment variables.
- *
- *   $ DEBUG_COLORS=no DEBUG_DEPTH=10 DEBUG_SHOW_HIDDEN=enabled node script.js
- */
-
-exports.inspectOpts = Object.keys(process.env).filter(key => {
-	return /^debug_/i.test(key);
-}).reduce((obj, key) => {
-	// Camel-case
-	const prop = key
-		.substring(6)
-		.toLowerCase()
-		.replace(/_([a-z])/g, (_, k) => {
-			return k.toUpperCase();
-		});
-
-	// Coerce string value into JS value
-	let val = process.env[key];
-	if (/^(yes|on|true|enabled)$/i.test(val)) {
-		val = true;
-	} else if (/^(no|off|false|disabled)$/i.test(val)) {
-		val = false;
-	} else if (val === 'null') {
-		val = null;
-	} else {
-		val = Number(val);
+		this.ds = ds;
 	}
 
-	obj[prop] = val;
-	return obj;
-}, {});
+	/**
+	 *
+	 * @param  {...any} args
+	 */
+	debug(...args) {
+		const first = args?.at(0);
+		const last = args?.at(-1);
+		if (typeof first === "string") {
+			args[0] = `${first}`;
+			this.ds.debug(...args);
+		} else if (typeof first === "object" && typeof last === "string")
+			this.ds.debug(`${last}:%O`, first);
+		// args[0] = `${this.pre}:${args[0]}`
+		// console.debug(...args)
+		// console.debug(this.pre, ...args)
+	}
 
-/**
- * Is stdout a TTY? Colored output is enabled when `true`.
- */
+	/**
+	 *
+	 * @param  {...any} args
+	 */
+	error(...args) {
+		const first = args?.at(0);
+		const last = args?.at(-1);
+		if (typeof first === "string") {
+			args[0] = ` ${first}`;
+			this.ds.err(...args);
+		} else if (typeof first === "object" && typeof last === "string")
+			this.ds.err(` ${last}:%O`, first);
+	}
 
-function useColors() {
-	return 'colors' in exports.inspectOpts ?
-		Boolean(exports.inspectOpts.colors) :
-		tty.isatty(process.stderr.fd);
-}
+	/**
+	 *
+	 * @param  {...any} args
+	 */
+	err(...args) {
+		const first = args?.[0];
+		if (first?.message || first?.msg) {
+			args[0] = { exp: first.message || first.msg };
+			if (first?.code) args[0].exp += ` code:${first.code}`;
+		}
+		this.error(...args);
+	}
 
-/**
- * Adds ANSI color escape codes if enabled.
- *
- * @api public
- */
+	/**
+	 *
+	 * @param  {...any} args
+	 */
+	warn(...args) {
+		const first = args?.at(0);
+		const last = args?.at(-1);
+		if (typeof first === "string") this.ds.warn(...args);
+		else if (typeof first === "object" && typeof last === "string")
+			this.ds.warn(`${last}:%O`, first);
+	}
 
-function formatArgs(args) {
-	const {namespace: name, useColors} = this;
-
-	if (useColors) {
-		const c = this.color;
-		const colorCode = '\u001B[3' + (c < 8 ? c : '8;5;' + c);
-		const prefix = `  ${colorCode};1m${name} \u001B[0m`;
-
-		args[0] = prefix + args[0].split('\n').join('\n' + prefix);
-		args.push(colorCode + 'm+' + module.exports.humanize(this.diff) + '\u001B[0m');
-	} else {
-		args[0] = getDate() + name + ' ' + args[0];
+	/**
+	 *
+	 * @param  {...any} args
+	 */
+	info(...args) {
+		const first = args?.at(0);
+		const last = args?.at(-1);
+		if (typeof first === "string") this.ds.info(...args);
+		else if (typeof first === "object" && typeof last === "string")
+			this.ds.info(`${last}:%O`, first);
 	}
 }
 
-function getDate() {
-	if (exports.inspectOpts.hideDate) {
-		return '';
-	}
-	return new Date().toISOString() + ' ';
-}
-
 /**
- * Invokes `util.formatWithOptions()` with the specified arguments and writes to stderr.
+ * 标准日志输出或构建模块日志类实例，用于模块中带[m:xxx]标记日志输出
+ * 启用 {f:fn} 标记时，需在函数尾部清除f（log({f:''})），否则会溢出到其他函数
+ * @param {...any} args - params
+ * returns {pino & (...args) => void}
  */
-
 function log(...args) {
-	return process.stderr.write(util.formatWithOptions(exports.inspectOpts, ...args) + '\n');
+	const last = args.at(-1);
+
+	// 全局日志
+	if (args.length !== 1 || !last?.env) return;
+
+	const { env } = last;
+	// 唯一 env 属性，则构造新的 log 实例，这种写法，能被jsDoc识别子属性
+	const lg = new Log({ env });
+
+	/** @param {*} args2 */
+	const R = (...args2) => lg.debug(...args2);
+	R.debug = lg.debug.bind(lg);
+	R.info = lg.info.bind(lg);
+	R.warn = lg.warn.bind(lg);
+	R.info = lg.info.bind(lg);
+	R.error = lg.error.bind(lg);
+	R.err = lg.err.bind(lg);
+
+	return R;
 }
 
 /**
- * Save `namespaces`.
- *
- * @param {String} namespaces
- * @api private
+ * 获取模块文件名称
+ * @param {string} file
+ * @returns
  */
-function save(namespaces) {
-	if (namespaces) {
-		process.env.DEBUG = namespaces;
-	} else {
-		// If you set a process.env field to null or undefined, it gets cast to the
-		// string 'null' or 'undefined'. Just delete instead.
-		delete process.env.DEBUG;
-	}
+function name(file) {
+	const baseName = path.basename(file);
+	return baseName.replace(path.extname(baseName), "");
 }
 
-/**
- * Load `namespaces`.
- *
- * @return {String} returns the previously persisted debug modes
- * @api private
- */
-
-function load() {
-	return process.env.DEBUG;
-}
-
-/**
- * Init logic for `debug` instances.
- *
- * Create a new `inspectOpts` object in case `useColors` is set
- * differently for a particular `debug` instance.
- */
-
-function init(debug) {
-	debug.inspectOpts = {};
-
-	const keys = Object.keys(exports.inspectOpts);
-	for (let i = 0; i < keys.length; i++) {
-		debug.inspectOpts[keys[i]] = exports.inspectOpts[keys[i]];
-	}
-}
-
-module.exports = require('./common')(exports);
-
-const {formatters} = module.exports;
-
-/**
- * Map %o to `util.inspect()`, all on a single line.
- */
-
-formatters.o = function (v) {
-	this.inspectOpts.colors = this.useColors;
-	return util.inspect(v, this.inspectOpts)
-		.split('\n')
-		.map(str => str.trim())
-		.join(' ');
-};
-
-/**
- * Map %O to `util.inspect()`, allowing multiple lines if needed.
- */
-
-formatters.O = function (v) {
-	this.inspectOpts.colors = this.useColors;
-	return util.inspect(v, this.inspectOpts);
-};
+export { name, log };
