@@ -1,7 +1,7 @@
 {
-  "name": "log",
+  "name": "@wiajs/log",
   "description": "Lightweight debugging utility for Node.js and the browser",
-  "version": "4.3.8",
+  "version": "4.3.10",
   "type": "module",
   "main": "index.js",
   "browser": "./lib/browser.js",
@@ -36,7 +36,6 @@
     "test:coverage": "cat ./coverage/lcov.info | coveralls"
   },
   "keywords": ["debug", "log", "debugger"],
-  "files": ["src", "LICENSE", "README.md"],
   "repository": {
     "type": "git",
     "url": "https://github.com/wiajs/log"
@@ -52,6 +51,9 @@
     "Andrew Rhyne <rhyneandrew@gmail.com>"
   ],
   "license": "MIT",
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "debug": "^4.3.7"
   },

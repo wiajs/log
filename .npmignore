@@ -1,8 +1,9 @@
-__tests__
-__mocks__
-.git
-.vscode
-.version
-node_modules
-src
-script
+**/*
+!/dist/**
+!/lib/**
+!index.js
+!index.d.ts
+!index.d.cts
+!CHANGELOG.md
+!LICENSE
+!README.md
