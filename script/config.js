@@ -10,7 +10,7 @@ import replace from '@rollup/plugin-replace' // 替换待打包文件里的一�
 
 import {getJsOpt, getTsOpt} from './swc.js'
 
-import pkg from '../package.json' assert {type: 'json'}
+import pkg from '../package.json' with {type: 'json'}
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 
@@ -19,7 +19,7 @@ const name = 'Log' // umd 模式下的全局变量名
 
 const banner = `/*!
   * wia log v${version}
-  * (c) 2022-${new Date().getFullYear()} Sibyl Yu and contributors
+  * (c) 2024-${new Date().getFullYear()} Sibyl Yu and contributors
   * Released under the MIT License.
   */`
 
@@ -28,7 +28,7 @@ const isDev = env !== 'production'
 
 const dir = _path => path.resolve(__dirname, '../', _path)
 
-const input = dir('./src/node.js')
+const input = dir('./src/log.js')
 
 /**
  * 从 package.json 和 builtinModules 中获取不打包的引用库
@@ -45,30 +45,37 @@ const external = [
 ]
 
 const configs = [
-  // browser dev
   {
     input,
     file: dir('dist/log.cjs'), // cjs格式，后端打包，保留引用
     format: 'cjs',
+    exports: 'named', // 名称方式输出各个子模块 "default" 默认导出一个模块
     browser: false,
     external,
   },
   {
-    input,
-    file: dir('dist/log.mjs'), // esm格式，后端打包，保留引用
+    input: dir('./src/log.bs.js'),
+    file: dir('dist/log.bs.cjs'), // cjs格式，后端打包，保留引用
+    format: 'cjs',
+    exports: 'named', // 名称方式输出各个子模块 "default" 默认导出一个模块
+    external,
+  },
+  {
+    input: dir('./src/log.bs.js'),
+    file: dir('dist/log.mjs'), // esm fro CDN
     format: 'esm',
     exports: 'named', // 名称方式输出各个子模块
-    browser: false,
-    external,
+    browser: true,
+    external: [],
   },
   {
-    input: dir('./src/browser.js'),
-    file: dir('dist/log.js'), // umd格式，es5语法，web直接加载，合并引用
+    input: dir('./src/log.bs.js'),
+    file: dir('dist/log.js'), // umd for cdn or browser，es5语法，web直接加载，合并引用
     format: 'umd',
     browser: true,
     es5: true, // 兼容旧版本浏览器
     name, // 全局名称，替换 window.name
-    // exports: "default", // default 方式输出单一包
+    exports: 'default', // default 方式输出单一包
     external: [],
   },
 ].map(genConfig)

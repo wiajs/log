@@ -1,1 +1,1 @@
-export { default, name, log } from "./lib/node";
+export {default, name, log} from './lib/log.js'

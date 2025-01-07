@@ -1,27 +1,27 @@
 {
   "name": "@wiajs/log",
   "description": "Lightweight debugging utility for Node.js and the browser",
-  "version": "4.3.10",
+  "version": "4.3.19",
   "type": "module",
   "main": "index.js",
-  "browser": "./lib/browser.js",
+  "types": "types/log.d.ts", 
+  "browser": "lib/log.bs.js",
   "exports": {
     ".": {
-      "types": {
-        "require": "./index.d.cts",
-        "default": "./index.d.ts"
-      },
       "node": {
+        "import": "./index.js",
         "require": "./dist/log.cjs",
-        "default": "./index.js"
+        "types": "./types/log.d.ts"
       },
       "browser": {
-        "require": "./lib/browser.js",
-        "default": "./lib/browser.js"
+        "import": "./lib/log.bs.js",
+        "require": "./dist/log.bs.cjs",
+        "types": "./types/log.bs.d.ts"
       },
       "default": {
+        "import": "./index.js",
         "require": "./dist/log.cjs",
-        "default": "./dist/log.mjs"
+        "types": "./types/log.d.ts"
       }
     },
     "./package.json": "./package.json"
