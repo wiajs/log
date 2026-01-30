@@ -1,10 +1,10 @@
 {
   "name": "@wiajs/log",
   "description": "Lightweight debugging utility for Node.js and the browser",
-  "version": "4.3.19",
+  "version": "4.3.21",
   "type": "module",
   "main": "index.js",
-  "types": "types/log.d.ts", 
+  "types": "types/log.d.ts",
   "browser": "lib/log.bs.js",
   "exports": {
     ".": {
@@ -28,7 +28,6 @@
   },
   "scripts": {
     "build": "cross-env NODE_ENV=production gulp build -f gulpfile.js",
-    "lib": "swc --config-file ./.swcrc ./src -d lib -w --strip-leading-paths",
     "lint": "xo",
     "test": "npm run test:node && npm run test:browser && npm run lint",
     "test:node": "istanbul cover _mocha -- test.js test.node.js",
@@ -57,22 +56,9 @@
   "dependencies": {
     "debug": "^4.3.7"
   },
-  "devDependencies": {
-    "brfs": "^2.0.1",
-    "browserify": "^16.2.3",
-    "coveralls": "^3.0.2",
-    "istanbul": "^0.4.5",
-    "karma": "^3.1.4",
-    "karma-browserify": "^6.0.0",
-    "karma-chrome-launcher": "^2.2.0",
-    "karma-mocha": "^1.3.0",
-    "mocha": "^5.2.0",
-    "mocha-lcov-reporter": "^1.2.0",
-    "sinon": "^14.0.0",
-    "xo": "^0.23.0"
-  },
+  "devDependencies": {},
   "peerDependenciesMeta": {},
   "engines": {
-    "node": ">=6.0"
+    "node": ">=13.0"
   }
 }

@@ -1,6 +1,6 @@
-import path from 'node:path'
-import {fileURLToPath} from 'node:url'
 import debug from 'debug'
+import path from 'path'
+import {fileURLToPath} from 'url'
 
 /**
  * debug日志封装,
@@ -45,12 +45,14 @@ export default class Log {
    * @param  {...any} args
    */
   debug(...args) {
-    const first = args?.at(0)
-    const last = args?.at(-1)
+    const first = args?.[0]
+    const last = args?.[args.length - 1]
+
     if (typeof first === 'string') {
-      args.shift()      
+      args.shift()
       this.dgs.debug(first, ...args)
-    } else if (typeof first === 'object' && typeof last === 'string') this.dgs.debug(`${last}:%O`, first)
+    } else if (typeof first === 'object' && typeof last === 'string')
+      this.dgs.debug(`${last}:%O`, first)
     // args[0] = `${this.pre}:${args[0]}`
     // console.debug(...args)
     // console.debug(this.pre, ...args)
@@ -61,12 +63,13 @@ export default class Log {
    * @param  {...any} args
    */
   error(...args) {
-    const first = args?.at(0)
-    const last = args?.at(-1)
+    const first = args?.[0]
+    const last = args?.[args.length - 1]
     if (typeof first === 'string') {
       args.shift()
       this.dgs.err(` ${first}`, ...args)
-    } else if (typeof first === 'object' && typeof last === 'string') this.dgs.err(` ${last}:%O`, first)
+    } else if (typeof first === 'object' && typeof last === 'string')
+      this.dgs.err(` ${last}:%O`, first)
   }
 
   /**
@@ -87,13 +90,13 @@ export default class Log {
    * @param  {...any} args
    */
   warn(...args) {
-    const first = args?.at(0)
-    const last = args?.at(-1)
+    const first = args?.[0]
+    const last = args?.[args.length - 1]
     if (typeof first === 'string') {
       args.shift()
       this.dgs.warn(first, ...args)
-    }
-    else if (typeof first === 'object' && typeof last === 'string') this.dgs.warn(`${last}:%O`, first)
+    } else if (typeof first === 'object' && typeof last === 'string')
+      this.dgs.warn(`${last}:%O`, first)
   }
 
   /**
@@ -101,15 +104,15 @@ export default class Log {
    * @param  {...any} args
    */
   info(...args) {
-    const first = args?.at(0)    
-    const last = args?.at(-1)
+    const first = args?.[0]
+    const last = args?.[args.length - 1]
     // const dg = debug('ab')
     // dg()
     if (typeof first === 'string') {
       args.shift()
       this.dgs.info(first, ...args)
-    }
-    else if (typeof first === 'object' && typeof last === 'string') this.dgs.info(`${last}:%O`, first)
+    } else if (typeof first === 'object' && typeof last === 'string')
+      this.dgs.info(`${last}:%O`, first)
   }
 }
 
@@ -120,7 +123,7 @@ export default class Log {
  * returns {pino & (...args) => void}
  */
 function log(...args) {
-  const last = args.at(-1)
+  const last = args?.[args.length - 1]
 
   // 全局日志
   if (args.length !== 1 || !last?.env) return
@@ -154,4 +157,4 @@ function name(file) {
   return baseName.replace(path.extname(baseName), '')
 }
 
-export {name, log}
+export {log, name}

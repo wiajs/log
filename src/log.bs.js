@@ -19,20 +19,21 @@ class Log {
 
   /**
    * get log desc
-   * 描述字符串作为最后参数调用，显示时，前置
+   * 描述字符串后置调用，前置显示
    * @param {*[]} args
-   * @returns {{desc: string, arg: *[]}}
+   * @returns {string}
    */
   getDesc(args) {
-    let R = {desc: '', arg: args}
+    let R = ''
     try {
       const _ = this
       const {m} = _
-      let fn = ''
-      let desc = ''
+      let fn = '',
+        desc = ''
 
       if (args.length > 1) {
-        const last = args.at(-1)
+        const last = args?.[args.length - 1]
+
         if (typeof last === 'object') {
           ;({desc, fn} = last)
         } else if (typeof last === 'string') desc = last
@@ -43,8 +44,8 @@ class Log {
         }
       }
       fn = fn || _.fn
-      if (m) desc = `${desc}[${m}${fn ? `:${fn}` : ''}]` // eslint-disable-line
-      R = {desc, arg: args}
+      if (m) desc = `${desc}[${m}${fn ? ':' + fn : ''}]` // eslint-disable-line
+      R = desc
     } catch (e) {
       console.error(`getDesc exp:${e.message}`)
     }
@@ -55,7 +56,7 @@ class Log {
   /** @param {...any} args - params */
   log(...args) {
     const _ = this
-    const last = args.at(-1)
+    const last = args?.[args.length - 1]
     // clear fn
     if (args.length === 1 && typeof last === 'object' && last.fn) _.fn = ''
     else {
@@ -99,8 +100,8 @@ class Log {
   /** @param {...any} args - params */
   error(...args) {
     const _ = this
-    const {desc, arg} = _.getDesc(args)
-    if (desc) console.error(desc, ...arg)
+    const desc = _.getDesc(args)
+    if (desc) console.error(desc, ...args)
     else console.log(...args)
   }
 
@@ -110,7 +111,7 @@ class Log {
   err(...args) {
     const _ = this
     const first = args?.[0]
-    if (first instanceof Error || (first?.message && first?.cause && first?.stack))
+    if (first instanceof Error || (first && first.message && first.cause && first.stack))
       args[0] = {exp: args[0].message}
     _.error(...args)
   }
@@ -120,16 +121,16 @@ class Log {
  * get log desc
  * 描述字符串作为最后参数调用，显示时，前置
  * @param {*[]} args
- * @returns {{desc: string, arg: *[]}}
+ * @returns {string}
  */
 function getDesc(args) {
   let desc = ''
-  const last = args.at(-1)
+  const last = args?.[args.length - 1]
   if (typeof last === 'string') {
     desc = last
     args.pop()
   }
-  return {desc, arg: args}
+  return desc
 }
 
 /**
@@ -139,7 +140,7 @@ function getDesc(args) {
  * returns {*}
  */
 function log(...args) {
-  const last = args.at(-1)
+  const last = args?.[args.length - 1]
 
   // 全局日志
   if (args.length !== 1 || !last?.m) {
@@ -167,46 +168,47 @@ function log(...args) {
  * 用于 catch(e) log.err(e)
  * @param {...any} args - params */
 log.err = (...args) => {
-  const {desc, arg} = getDesc(args)
+  const desc = getDesc(args)
   const first = args?.[0]
-  if (first instanceof Error || (first?.message && first?.cause && first?.stack))
+  if (first instanceof Error || (first && first.message && first.cause && first.stack))
     args[0] = {exp: args[0].message}
-  desc ? console.error(desc, ...arg) : console.error(...args)
+  desc ? console.error(desc, ...args) : console.error(...args)
 }
 
 /**
  * @param {...any} args - params */
 log.error = (...args) => {
-  const {desc, arg} = getDesc(args)
-  desc ? console.error(desc, ...arg) : console.error(...args)
+  const desc = getDesc(args)
+  desc ? console.error(desc, ...args) : console.error(...args)
 }
 
 /**
  * @param {...any} args - params */
 log.warn = (...args) => {
-  const {desc, arg} = getDesc(args)
-  desc ? console.warn(desc, ...arg) : console.warn(...args)
+  const desc = getDesc(args)
+  desc ? console.warn(desc, ...args) : console.warn(...args)
 }
 
 /**
  * @param {...any} args - params */
 log.info = (...args) => {
-  const {desc, arg} = getDesc(args)
-  desc ? console.info(desc, ...arg) : console.info(...args)
+  const desc = getDesc(args)
+  desc ? console.info(desc, ...args) : console.info(...args)
 }
 
 /**
  * @param {...any} args - params */
 log.debug = (...args) => {
-  const {desc, arg} = getDesc(args)
-  desc ? console.log(desc, ...arg) : console.log(...args)
+  const desc = getDesc(args)
+  desc ? console.log(desc, ...args) : console.log(...args)
 }
 
 /**
  * @param {...any} args - params */
 log.trace = (...args) => {
-  const {desc, arg} = getDesc(args)
-  desc ? console.trace(desc, ...arg) : console.trace(...args)
+  const desc = getDesc(args)
+  desc ? console.trace(desc, ...args) : console.trace(...args)
 }
 
-export default log
+// export default log;
+export {log, Log}
